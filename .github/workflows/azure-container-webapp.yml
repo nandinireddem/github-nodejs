@@ -1,38 +1,54 @@
-name: NodeJs
+name: project2
 
 on:
-  schedule:
-    - cron: '*/5 * * * *'
-    
+  push:
+
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        os:
+          - ubuntu-latest
+          - windows-latest
+
+        node-version:
+          - 18
+          - 20
+          - 22
+
+        exclude:
+          - os: windows-latest
+            node-version: 22
 
     steps:
-      - name: Get code
-        uses: actions/checkout@v6
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v6
+      - name: Setup NodeJS
+        uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: ${{ matrix.node-version }}
 
-      - name: Install dependencies
+      - name: Cache Dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ matrix.node-version }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-${{ matrix.node-version }}-
+            ${{ runner.os }}-node-
+
+      - name: Install Dependencies
         run: npm install
 
-      - name: Run tests
-        run: npm test
-
-      - name: Build
+      - name: Build Application
         run: npm run build
 
-      - name: Artifact upload
+      - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: artifact-1
+          name: artifact-${{ matrix.os }}-node${{ matrix.node-version }}
           path: |
-             package*
-
-
-      - name: Deploy
-        run: echo "Deploying to production server..."
+            package*
